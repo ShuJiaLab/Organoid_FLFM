@@ -1,4 +1,4 @@
-# Organoid_FLFM-
+# Organoid_FLFM
 <!-- the following links are internal links that links to headers on this page -->
 
 # Fourier light-field imaging of human organoids with a hybrid point-spread function
