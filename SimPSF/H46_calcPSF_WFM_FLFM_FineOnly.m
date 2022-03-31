@@ -1,8 +1,8 @@
 function [] = H46_calcPSF_WFM_FLFM_FineOnly(Path_s11c_unifor , Path_s31c_unifor , Data_06_CCD_RF  , Flag_WFMPSFOnly ,...
                                             P27_NIP_RefAr_Odd, P27_NIP_RefAr_Eve, P47_MLA_NumAdSim, P47_MLA_NumAd_RF,...
-                                            Flag_Startpoint  , Flag_Finalpoint  , Object_33_NumZd , Object_35_CoorZ ,...
-                                            Step_NIP_Finetune, Fl_01_obj, Ma_06_Mic, NA_01_obj, Ind01_obj, lambda   ,...
-                                            Step_Propergation, segsize  , dis_04_em, det_08MLA, dis_05_mc, lambdN   ,...
+                                            Flag_Startpoint  , Flag_Finalpoint  , Object_33_NumZd , Object_35_ZCoor ,...
+                                            Step_NIP_Finetune, Fl_01_obj, Ma_06_Mic, NA_01_obj, Ind01_obj, lambdaAir,...
+                                            Step_Propergation, NIP_SegSZ, dis_04_em, det_08MLA, dis_05_mc, lambdaLen,...
                                             Flag_Profilesim  , P41_Fou_MLATra , P42_Fou_MLAApt,...
                                             Data_02_formDt   , Data_01_formIm , Data_00_maxval)
 % 
@@ -25,10 +25,10 @@ function [] = H46_calcPSF_WFM_FLFM_FineOnly(Path_s11c_unifor , Path_s31c_unifor 
 
     for idxk  = Flag_Startpoint:Flag_Finalpoint                            % Wave propogation and CSF save     
 %                 idxk  = 151;
-                Path_s31c_zdepth = [num2str(idxk,'%03d'),'_',num2str(Object_35_CoorZ(idxk)*1e6,'%+08.3f'),'um'];
+                Path_s31c_zdepth = [num2str(idxk,'%03d'),'_',num2str(Object_35_ZCoor(idxk)*1e6,'%+08.3f'),'um'];
                 P20_NIP_CSFOdd = H13_calcPSF_Single_GPU_3_SAccelerate_V7_Segment(  ...
-                                         Step_NIP_Finetune, Object_35_CoorZ(idxk), P20_NIP_CoorR_Odd , P20_NIP_CoorR_Odd ,...
-                                         Fl_01_obj, Ma_06_Mic, NA_01_obj, Ind01_obj , lambda  , Data_00_maxval, segsize);       % CSF In Image plane.
+                                         Step_NIP_Finetune, Object_35_ZCoor(idxk), P20_NIP_CoorR_Odd , P20_NIP_CoorR_Odd ,...
+                                         Fl_01_obj, Ma_06_Mic, NA_01_obj, Ind01_obj , lambdaAir  , Data_00_maxval, NIP_SegSZ);       % CSF In Image plane.
 %                 P20_NIP_CSFEve = H13_calcPSF_Single_GPU_3_SAccelerate_V7_Segment(  ...
 %                                          Step_NIP_Finetune, Object_35_CoorZ(idxk), P20_NIP_CoorR_Eve , P20_NIP_CoorR_Eve ,...
 %                                          Fl_01_obj, Ma_06_Mic, NA_01_obj, Ind01_obj , lambda  , Data_00_maxval, segsize);       % CSF In Image plane.
@@ -56,15 +56,15 @@ function [] = H46_calcPSF_WFM_FLFM_FineOnly(Path_s11c_unifor , Path_s31c_unifor 
             end
                                                                            % Stp & CSF on MIC plane simulation
             if (Flag_Profilesim==0)                                        % MLA & CSF on CCD plane simulation
-                P30_Fou_CSFunc                 = J31_OFT_Lens_Vol_GPU(        lambda, P20_NIP_CSFStp, Data_06_CCD_RF, dis_04_em, Step_Propergation);
+                P30_Fou_CSFunc                 = J31_OFT_Lens_Vol_GPU(        lambdaAir, P20_NIP_CSFStp, Data_06_CCD_RF, dis_04_em, Step_Propergation);
                 P401Fou_CSFunc = P30_Fou_CSFunc.*P41_Fou_MLATra;
-                P402Fou_CSFunc                 = J21_OFT_Vol_GPU(             lambdN, P401Fou_CSFunc, Data_06_CCD_RF, det_08MLA, Step_Propergation);
+                P402Fou_CSFunc                 = J21_OFT_Vol_GPU(             lambdaLen, P401Fou_CSFunc, Data_06_CCD_RF, det_08MLA, Step_Propergation);
                 P403Fou_CSFunc = P402Fou_CSFunc.*P42_Fou_MLAApt;
-                P50_Cam_CSFtem                 = J21_OFT_Vol_GPU(             lambda, P403Fou_CSFunc, Data_06_CCD_RF, dis_05_mc, Step_Propergation);
+                P50_Cam_CSFtem                 = J21_OFT_Vol_GPU(             lambdaAir, P403Fou_CSFunc, Data_06_CCD_RF, dis_05_mc, Step_Propergation);
             else
-               [P30_Fou_CSFunc , PA0_Pr1_CSFunc]=J32_OFT_Lens_Vol_Profile_GPU(lambda, P20_NIP_CSFStp, Data_06_CCD_RF, dis_04_em, Step_Propergation);
+               [P30_Fou_CSFunc , PA0_Pr1_CSFunc]=J32_OFT_Lens_Vol_Profile_GPU(lambdaAir, P20_NIP_CSFStp, Data_06_CCD_RF, dis_04_em, Step_Propergation);
                 P401Fou_CSFunc = P30_Fou_CSFunc.*P41_Fou_MLATra;
-               [P402Fou_CSFunc , PA0_Pr3_CSFunc]=J22_OFT_Vol_Proflie_GPU(     lambdN, P401Fou_CSFunc, Data_06_CCD_RF, det_08MLA, Step_Propergation);
+               [P402Fou_CSFunc , PA0_Pr3_CSFunc]=J22_OFT_Vol_Proflie_GPU(     lambdaLen, P401Fou_CSFunc, Data_06_CCD_RF, det_08MLA, Step_Propergation);
                 P403Fou_CSFunc = P402Fou_CSFunc.*P42_Fou_MLAApt;
                 
                 for idxsg = 1                                              % Test codes    
@@ -86,7 +86,7 @@ function [] = H46_calcPSF_WFM_FLFM_FineOnly(Path_s11c_unifor , Path_s31c_unifor 
 %                     dis_06_ti  = del_06_ti + Fl_02_tub + Fl_07_img;                      %get
 %                     dis_07_ec  = del_07_ec + Fl_03_ent;                                  %get
                 end
-               [P50_Cam_CSFtem , PA0_Pr2_CSFunc]=J22_OFT_Vol_Proflie_GPU(     lambda, P403Fou_CSFunc, Data_06_CCD_RF, dis_05_mc, Step_Propergation);
+               [P50_Cam_CSFtem , PA0_Pr2_CSFunc]=J22_OFT_Vol_Proflie_GPU(     lambdaAir, P403Fou_CSFunc, Data_06_CCD_RF, dis_05_mc, Step_Propergation);
             end
                 P50_Cam_CSFunc = P35_Imgcrop_centerS( P50_Cam_CSFtem, P47_MLA_NumAd_RF  );
                 P31_Fou_PSFunc = abs(P30_Fou_CSFunc).^2;
@@ -154,6 +154,13 @@ function [] = H46_calcPSF_WFM_FLFM_FineOnly(Path_s11c_unifor , Path_s31c_unifor 
     %     end
     % end
     % 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %  Input = I30_Stop_Modulation( P27_NIP_NumAdCSF );
+    %  Side_Long = P47_MLA_NumAdSim;
+    %  P20_NIP_Stoper = Image_pad;
+    %     Input     = P20_NIP_CSFunc;
+    %     Side_Long = P47_MLA_NumAdSim;
+    %     P20_NIP_CSFStp = Image_pad.*P20_NIP_Stoper;
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         Size_old = [size( Input,1  ), size( Input,2  )];
